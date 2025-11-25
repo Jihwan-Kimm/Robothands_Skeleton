@@ -5,11 +5,11 @@ from xml.dom import minidom
 
 #### ONLY ONE OBJECT PER IMAGE IS ASSUMED ####
 
-out_dir = './out'
+out_dir = 'C:\\Users\\rtss\\Desktop\\git\\Robothands_Skeleton\\DetectJoints\\out'
 if not os.path.exists(out_dir):
     os.makedirs(out_dir)
 
-file = minidom.parse('annotations.xml')
+file = minidom.parse('C:\\Users\\rtss\\Desktop\\git\\Robothands_Skeleton\\DetectJoints\\annotations.xml')
 
 images = file.getElementsByTagName('image')
 
@@ -18,12 +18,18 @@ for image in images:
     width = int(image.getAttribute('width'))
     height = int(image.getAttribute('height'))
     name = image.getAttribute('name')
+    print(name)
     elem = image.getElementsByTagName('points')
-    bbox = image.getElementsByTagName('box')[0]
-    xtl = int(float(bbox.getAttribute('xtl')))
-    ytl = int(float(bbox.getAttribute('ytl')))
-    xbr = int(float(bbox.getAttribute('xbr')))
-    ybr = int(float(bbox.getAttribute('ybr')))
+    # bbox = image.getElementsByTagName('box')[0]
+    # xtl = int(float(bbox.getAttribute('xtl')))
+    # ytl = int(float(bbox.getAttribute('ytl')))
+    # xbr = int(float(bbox.getAttribute('xbr')))
+    # ybr = int(float(bbox.getAttribute('ybr')))
+    xtl=0
+    ytl=0
+    xbr=width
+    ybr=height
+    
     w = xbr - xtl
     h = ybr - ytl
     label_file = open(os.path.join(out_dir, name[:-4] + '.txt'), 'w')
@@ -32,7 +38,6 @@ for image in images:
 
         label_file.write('0 {} {} {} {} '.format(str((xtl + (w / 2)) / width), str((ytl + (h / 2)) / height),
                                                  str(w / width), str(h / height)))
-
         points = e.attributes['points']
         points = points.value.split(';')
         points_ = []
@@ -46,3 +51,5 @@ for image in images:
                 label_file.write(' ')
             else:
                 label_file.write('\n')
+
+label_file.close()
