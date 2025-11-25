@@ -443,8 +443,8 @@ def main() -> None:
         robot,
         moving_joint="left_joint_3",
         start_val=math.pi / 2,
-        end_val=math.pi / 2,   # 지금은 고정 포즈용으로 동일 값
-        duration=1000.0,
+        end_val=math.pi,   # 지금은 고정 포즈용으로 동일 값
+        duration=10.0,
         fps=30,
         view_elev=180.0,
         view_azim=60.0,
