@@ -18,17 +18,12 @@ for image in images:
     width = int(image.getAttribute('width'))
     height = int(image.getAttribute('height'))
     name = image.getAttribute('name')
-    print(name)
     elem = image.getElementsByTagName('points')
-    # bbox = image.getElementsByTagName('box')[0]
-    # xtl = int(float(bbox.getAttribute('xtl')))
-    # ytl = int(float(bbox.getAttribute('ytl')))
-    # xbr = int(float(bbox.getAttribute('xbr')))
-    # ybr = int(float(bbox.getAttribute('ybr')))
-    xtl=0
-    ytl=0
-    xbr=width
-    ybr=height
+    bbox = image.getElementsByTagName('box')[0]
+    xtl = int(float(bbox.getAttribute('xtl')))
+    ytl = int(float(bbox.getAttribute('ytl')))
+    xbr = int(float(bbox.getAttribute('xbr')))
+    ybr = int(float(bbox.getAttribute('ybr')))
     
     w = xbr - xtl
     h = ybr - ytl
