@@ -7,7 +7,7 @@
       <name>Skeleton</name>
       <bugtracker></bugtracker>
       <created>2025-11-25 10:51:48.916460+00:00</created>
-      <updated>2025-11-25 14:21:35.297339+00:00</updated>
+      <updated>2025-11-25 14:16:12.858060+00:00</updated>
       <tasks>
         <task>
           <id>1809764</id>
@@ -17,7 +17,7 @@
           <overlap>0</overlap>
           <bugtracker></bugtracker>
           <created>2025-11-25 10:57:51.667541+00:00</created>
-          <updated>2025-11-25 14:21:35.295219+00:00</updated>
+          <updated>2025-11-25 14:16:12.855639+00:00</updated>
           <subset>default</subset>
           <start_frame>0</start_frame>
           <stop_frame>12</stop_frame>
@@ -53,83 +53,57 @@
         </label>
       </labels>
     </project>
-    <dumped>2025-11-25 14:21:55.699163+00:00</dumped>
+    <dumped>2025-11-25 14:16:28.602048+00:00</dumped>
   </meta>
   <image id="0" name="1.png" subset="default" task_id="1809764" width="1280" height="720">
     <points label="skeleton" source="manual" occluded="0" points="889.33,280.44;852.64,195.25;838.34,221.37;828.39,247.48;889.95,401.06;904.25,497.43;930.98,588.21;496.37,230.07;475.23,88.93;442.28,101.99;418.03,109.45;411.81,189.66;386.94,256.19;364.56,307.17" z_order="0">
     </points>
-    <box label="skeleton" source="manual" occluded="0" xtl="280.62" ytl="85.82" xbr="964.56" ybr="609.35" z_order="0">
-    </box>
   </image>
   <image id="1" name="10.png" subset="default" task_id="1809764" width="1280" height="720">
     <points label="skeleton" source="manual" occluded="0" points="890.57,284.17;851.40,196.50;838.96,221.99;828.39,248.73;888.70,394.22;906.11,501.16;934.09,583.23;626.94,271.11;652.44,212.04;622.59,210.18;595.85,211.42;574.71,226.34;543.63,289.14;513.78,329.55" z_order="0">
     </points>
-    <box label="skeleton" source="manual" occluded="0" xtl="399.38" ytl="167.90" xbr="966.42" ybr="608.10" z_order="0">
-    </box>
   </image>
   <image id="2" name="11.png" subset="default" task_id="1809764" width="1280" height="720">
     <points label="skeleton" source="manual" occluded="0" points="890.57,289.14;851.40,202.71;841.45,229.45;829.02,261.16;886.22,399.19;904.25,507.38;932.85,586.96;625.70,283.54;649.33,211.42;628.19,212.66;603.94,210.18;575.96,230.69;549.84,287.90;512.54,327.07" z_order="0">
     </points>
-    <box label="skeleton" source="manual" occluded="0" xtl="392.54" ytl="155.46" xbr="975.75" ybr="604.37" z_order="0">
-    </box>
   </image>
   <image id="3" name="12.png" subset="default" task_id="1809764" width="1280" height="720">
     <points label="skeleton" source="manual" occluded="0" points="893.06,291.01;852.02,203.34;840.83,233.80;827.77,256.19;888.08,394.22;904.87,498.67;935.34,584.48;689.12,234.42;661.76,161.68;625.70,162.92;592.75,162.30;577.20,228.21;544.87,286.65;515.03,329.55" z_order="0">
     </points>
-    <box label="skeleton" source="manual" occluded="0" xtl="393.16" ytl="143.03" xbr="975.75" ybr="598.16" z_order="0">
-    </box>
   </image>
   <image id="4" name="13.png" subset="default" task_id="1809764" width="1280" height="720">
-    <box label="skeleton" source="manual" occluded="0" xtl="394.40" ytl="124.37" xbr="972.64" ybr="608.73" z_order="0">
-    </box>
     <points label="skeleton" source="manual" occluded="0" points="888.71,289.76;852.64,201.47;837.10,231.32;827.15,258.67;884.35,396.08;905.49,501.16;932.85,585.72;687.25,231.94;657.41,153.60;625.08,151.73;595.85,151.73;577.82,225.10;547.36,284.17;519.38,327.69" z_order="0">
     </points>
   </image>
   <image id="5" name="2.png" subset="default" task_id="1809764" width="1280" height="720">
-    <box label="skeleton" source="manual" occluded="0" xtl="289.33" ytl="86.45" xbr="963.32" ybr="609.97" z_order="0">
-    </box>
     <points label="skeleton" source="manual" occluded="0" points="888.71,292.25;853.26,201.47;837.72,230.07;828.39,253.08;885.60,395.46;903.63,507.38;936.58,588.83;470.26,244.37;482.69,115.05;447.88,116.29;415.54,115.05;411.19,200.85;391.30,263.65;363.32,314.01" z_order="0">
     </points>
   </image>
   <image id="6" name="3.png" subset="default" task_id="1809764" width="1280" height="720">
     <points label="skeleton" source="manual" occluded="0" points="890.57,291.01;852.02,204.58;835.85,228.83;830.26,256.19;884.97,397.95;904.25,503.65;934.71,585.72;445.39,248.73;488.91,155.46;455.34,154.84;419.90,154.84;413.06,233.18;393.78,276.70;370.78,320.85" z_order="0">
     </points>
-    <box label="skeleton" source="manual" occluded="0" xtl="284.97" ytl="140.54" xbr="973.89" ybr="609.35" z_order="0">
-    </box>
   </image>
   <image id="7" name="4.png" subset="default" task_id="1809764" width="1280" height="720">
     <points label="skeleton" source="manual" occluded="0" points="891.19,291.01;852.02,204.58;838.96,230.07;830.26,256.19;887.46,399.81;904.25,502.40;931.61,585.10;446.01,247.48;491.40,192.77;462.80,189.04;440.41,187.79;411.81,222.61;395.65,272.35;373.26,318.36" z_order="0">
     </points>
-    <box label="skeleton" source="manual" occluded="0" xtl="286.22" ytl="164.17" xbr="972.02" ybr="604.37" z_order="0">
-    </box>
   </image>
   <image id="8" name="5.png" subset="default" task_id="1809764" width="1280" height="720">
     <points label="skeleton" source="manual" occluded="0" points="894.30,290.38;850.16,205.20;838.96,230.07;829.64,253.70;886.84,402.92;906.74,503.65;935.34,583.85;436.68,217.64;484.56,169.76;452.85,166.65;420.52,166.03;403.11,202.09;388.19,261.16;366.42,312.14" z_order="0">
     </points>
-    <box label="skeleton" source="manual" occluded="0" xtl="284.97" ytl="131.21" xbr="970.16" ybr="610.59" z_order="0">
-    </box>
   </image>
   <image id="9" name="6.png" subset="default" task_id="1809764" width="1280" height="720">
-    <box label="skeleton" source="manual" occluded="0" xtl="280.62" ytl="108.21" xbr="967.67" ybr="621.78" z_order="0">
-    </box>
     <points label="skeleton" source="manual" occluded="0" points="891.81,291.63;848.29,205.20;838.34,234.42;825.91,261.16;884.35,397.33;907.98,503.65;937.82,583.85;435.44,194.01;478.96,142.40;449.12,141.78;416.79,139.30;400.00,180.33;382.59,254.32;357.10,305.93" z_order="0">
     </points>
   </image>
   <image id="10" name="7.png" subset="default" task_id="1809764" width="1280" height="720">
-    <box label="skeleton" source="manual" occluded="0" xtl="282.49" ytl="27.38" xbr="971.40" ybr="632.35" z_order="0">
-    </box>
     <points label="skeleton" source="manual" occluded="0" points="891.81,292.87;847.05,206.45;837.72,235.05;828.39,254.94;885.60,399.19;907.98,498.67;932.23,585.10;423.00,148.00;459.07,81.47;434.20,80.85;404.35,80.23;385.70,136.19;368.29,217.64;352.12,281.06" z_order="0">
     </points>
   </image>
   <image id="11" name="8.png" subset="default" task_id="1809764" width="1280" height="720">
     <points label="skeleton" source="manual" occluded="0" points="888.08,293.49;848.29,204.58;838.34,230.69;829.64,253.70;883.73,394.22;907.98,496.81;934.09,585.72;418.65,112.56;449.12,31.11;419.27,32.35;384.46,31.73;368.29,110.69;352.12,200.85;338.45,271.11" z_order="0">
     </points>
-    <box label="skeleton" source="manual" occluded="0" xtl="285.60" ytl="3.75" xbr="975.13" ybr="642.30" z_order="0">
-    </box>
   </image>
   <image id="12" name="9.png" subset="default" task_id="1809764" width="1280" height="720">
-    <box label="skeleton" source="manual" occluded="0" xtl="386.94" ytl="4.37" xbr="975.75" ybr="648.52" z_order="0">
-    </box>
     <points label="skeleton" source="manual" occluded="0" points="888.08,292.25;849.53,209.55;840.83,230.69;830.88,255.56;886.84,396.70;907.98,499.92;932.23,579.50;570.36,103.85;606.42,28.62;578.45,25.51;553.57,30.49;515.03,110.69;492.64,203.96;470.88,277.95" z_order="0">
     </points>
   </image>
