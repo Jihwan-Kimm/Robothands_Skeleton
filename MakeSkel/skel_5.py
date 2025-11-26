@@ -126,66 +126,6 @@ def _init_skeleton_artists(
 ):
     positions = compute_link_positions(robot, joint_cfg)
 
-    # ------------------------------------------------------------------
-    # 여기서부터: 그릴 링크만 명시적으로 정의
-    # ------------------------------------------------------------------
-    left_arm_core = [
-        "left_spherical_wrist_1_link",
-        "left_spherical_wrist_2_link",
-        "left_bracelet_link",
-    ]
-    right_arm_core = [
-        "right_spherical_wrist_1_link",
-        "right_spherical_wrist_2_link",
-        "right_bracelet_link",
-    ]
-    # SIMPLIFIED: Only 2 joints per finger (base + tip)
-    left_fingers = [
-        ["left_hand_link_0", "left_hand_link_3_tip"],
-        ["left_hand_link_4", "left_hand_link_7_tip"],
-        ["left_hand_link_8", "left_hand_link_11_tip"],
-        ["left_hand_link_12", "left_hand_link_15_tip"],
-    ]
-    right_fingers = [
-        ["right_hand_link_0", "right_hand_link_3_tip"],
-        ["right_hand_link_4", "right_hand_link_7_tip"],
-        ["right_hand_link_8", "right_hand_link_11_tip"],
-        ["right_hand_link_12", "right_hand_link_15_tip"],
-    ]
-    finger_bases = [
-        "left_hand_link_0",
-        "left_hand_link_4",
-        "left_hand_link_8",
-        "left_hand_link_12",
-        "right_hand_link_0",
-        "right_hand_link_4",
-        "right_hand_link_8",
-        "right_hand_link_12",
-    ]
-
-    # 선으로 이을 (parent, child) 쌍들을 구성
-    line_pairs: List[tuple[str, str]] = []
-
-    def add_chain(chain: List[str]) -> None:
-        for a, b in zip(chain[:-1], chain[1:]):
-            if a in positions and b in positions:
-                line_pairs.append((a, b))
-
-    # 팔 코어: 3개 링크를 연속으로 이음
-    add_chain(left_arm_core)
-    add_chain(right_arm_core)
-
-    # 손가락: base - tip만 직선으로
-    for base, tip in left_fingers + right_fingers:
-        if base in positions and tip in positions:
-            line_pairs.append((base, tip))
-
-    # 실제로 사용할 링크 이름 집합 (선에 등장하는 것만)
-    link_names = sorted({name for pair in line_pairs for name in pair})
-
-    # ------------------------------------------------------------------
-    # Figure / Axes 설정
-    # ------------------------------------------------------------------
     fig = plt.figure(figsize=(8, 8))
     ax: Axes3D = fig.add_axes([0.05, 0.32, 0.9, 0.63], projection="3d")
 
@@ -193,59 +133,104 @@ def _init_skeleton_artists(
     ax.set_facecolor("black")
     ax.set_axis_off()
 
-    def draw_segment(link_a, link_b, color="magenta"):
-        if link_a not in positions or link_b not in positions:
-            return None
-        p0, p1 = positions[link_a], positions[link_b]
-        return ax.plot(
-            [p0[0], p1[0]], [p0[1], p1[1]], [p0[2], p1[2]],
-            color=color, linewidth=2.0, alpha=1.0
-        )[0]
+    # ------------------------------------------------------
+    # 1) joint 그래프 분석: children_map, hand tip segment 판별
+    # ------------------------------------------------------
+    children_map: Dict[str, List[str]] = {}
+    for j in robot.joints:
+        parent_name = j.parent
+        child_name = j.child
+        children_map.setdefault(parent_name, []).append(child_name)
 
-    # ----------------- 링크 라인 생성 -----------------
+    def is_hand_tip_segment(joint) -> bool:
+        parent_name = joint.parent
+        child_name = joint.child
+        lname_parent = str(parent_name).lower()
+        lname_child = str(child_name).lower()
+
+        # child link 가 더 이상 자식이 없으면 leaf
+        is_leaf = child_name not in children_map
+        # hand 계열 링크만 대상으로
+        is_hand = ("hand" in lname_parent) or ("hand" in lname_child)
+        return is_leaf and is_hand
+
+    # hand tip 으로 간주되는 child link 들 (선/점 둘 다 빼줄 대상)
+    hand_tip_links = {j.child for j in robot.joints if is_hand_tip_segment(j)}
+
+    # 손등 비전 / RGB 센서 링크 필터
+    def is_hand_sensor_link(link_name: str) -> bool:
+        lname = link_name.lower()
+        if "hand" not in lname:
+            return False
+        # hand + (rgb / vision / camera / depth) 포함되면 센서로 간주
+        for kw in ("rgb", "vision", "camera", "depth"):
+            if kw in lname:
+                return True
+        return False
+
+    ignored_links = set(hand_tip_links)
+
+    # ----------------- 링크 라인 / 점 생성 -----------------
     line_list: List[Optional[plt.Line2D]] = []
-    for parent_name, child_name in line_pairs:
-        p0 = positions[parent_name]
-        p1 = positions[child_name]
-        xs = [p0[0], p1[0]]
-        ys = [p0[1], p1[1]]
-        zs = [p0[2], p1[2]]
-        line, = ax.plot(
-            xs, ys, zs,
-            linewidth=1.5,
-            color="magenta",
-            alpha=0.9,
-        )
-        line_list.append(line)
+    for joint in robot.joints:
+        parent_name = joint.parent
+        child_name = joint.child
 
-    # ----------------- 점 생성 (선에 등장하는 링크들만) -----------------
+        # hand tip segment 는 선 자체를 그리지 않음
+        if is_hand_tip_segment(joint):
+            line_list.append(None)
+            continue
+
+        if parent_name in positions and child_name in positions:
+            p0 = positions[parent_name]
+            p1 = positions[child_name]
+            xs = [p0[0], p1[0]]
+            ys = [p0[1], p1[1]]
+            zs = [p0[2], p1[2]]
+            line, = ax.plot(
+                xs, ys, zs,
+                linewidth=1.5,
+                color="magenta",
+                alpha=0.9,
+            )
+            line_list.append(line)
+        else:
+            line_list.append(None)
+
+    # 점을 찍을 링크들: hand tip + 손등 센서 링크는 제외
+    link_names = [
+        name
+        for name in positions.keys()
+        if name not in ignored_links and not is_hand_sensor_link(name)
+    ]
+
     pts = np.stack([positions[name] for name in link_names], axis=0)
     scatter = ax.scatter(
         pts[:, 0], pts[:, 1], pts[:, 2],
         s=20.0,
         c="yellow",
-        depthshade=False,  # 진하게
-        alpha=1.0,         # 투명도 없이
+        depthshade=False,   # 진하게 보이도록 shading 끔
+        alpha=1.0,          # 투명도 없이 불투명
     )
 
     # ===========================
-    # 1) 머리 위치 & "척추 방향" 계산 (프레이밍 용)
+    # 1) 머리 위치 & "척추 방향" 계산
     # ===========================
     head_pos = get_head_link_position(robot, joint_cfg)
 
-    # z가 가장 낮은 점을 "바닥 쪽"으로 가정
+    # z가 가장 낮은 점을 "발/바닥 쪽"으로 가정
     min_z_idx = np.argmin(pts[:, 2])
     root_pos = pts[min_z_idx]
 
-    spine_vec = root_pos - head_pos          # head -> root
+    spine_vec = root_pos - head_pos          # head -> root 방향 (대략 척추 방향)
     spine_len = float(np.linalg.norm(spine_vec))
     if spine_len < 1e-6:
         spine_len = 0.5
 
     # ===========================
-    # 2) 프레이밍: 머리 주변으로 축 잡기
+    # 2) 프레이밍: 머리~가슴 기준으로 축 고정
     # ===========================
-    center = head_pos + 0.3 * spine_vec
+    center = head_pos + 0.3 * spine_vec      # 머리에서 약간 아래
     half = 0.5 * spine_len
 
     ax.set_xlim(center[0] - half, center[0] + half)
@@ -255,7 +240,7 @@ def _init_skeleton_artists(
     # ===========================
     # 3) 카메라 초기 pitch/yaw
     # ===========================
-    cam_vec = head_pos - center
+    cam_vec = head_pos - center  # center 기준 카메라 위치 벡터
     vx, vy, vz = float(cam_vec[0]), float(cam_vec[1]), float(cam_vec[2])
     yaw_init = np.degrees(np.arctan2(vy, vx))                         # azim
     pitch_init = np.degrees(np.arctan2(vz, np.hypot(vx, vy)))         # elev
@@ -374,7 +359,7 @@ def _init_skeleton_artists(
 
 
 def _update_skeleton_artists(
-    robot: URDF,  # robot는 더 이상 안 써도 되지만 시그니처 유지
+    robot: URDF,
     positions: Dict[str, np.ndarray],
     line_list: List,
     scatter,
@@ -385,47 +370,12 @@ def _update_skeleton_artists(
     if offset is None:
         offset = np.zeros(3, dtype=float)
 
-    # _init_skeleton_artists와 동일한 방식으로 line_pairs 재구성
-    left_arm_core = [
-        "left_spherical_wrist_1_link",
-        "left_spherical_wrist_2_link",
-        "left_bracelet_link",
-    ]
-    right_arm_core = [
-        "right_spherical_wrist_1_link",
-        "right_spherical_wrist_2_link",
-        "right_bracelet_link",
-    ]
-    left_fingers = [
-        ["left_hand_link_0", "left_hand_link_3_tip"],
-        ["left_hand_link_4", "left_hand_link_7_tip"],
-        ["left_hand_link_8", "left_hand_link_11_tip"],
-        ["left_hand_link_12", "left_hand_link_15_tip"],
-    ]
-    right_fingers = [
-        ["right_hand_link_0", "right_hand_link_3_tip"],
-        ["right_hand_link_4", "right_hand_link_7_tip"],
-        ["right_hand_link_8", "right_hand_link_11_tip"],
-        ["right_hand_link_12", "right_hand_link_15_tip"],
-    ]
-
-    line_pairs: List[tuple[str, str]] = []
-
-    def add_chain(chain: List[str]) -> None:
-        for a, b in zip(chain[:-1], chain[1:]):
-            if a in positions and b in positions:
-                line_pairs.append((a, b))
-
-    add_chain(left_arm_core)
-    add_chain(right_arm_core)
-    for base, tip in left_fingers + right_fingers:
-        if base in positions and tip in positions:
-            line_pairs.append((base, tip))
-
-    # 라인 업데이트: line_pairs와 line_list 순서가 동일하다는 가정
-    for (parent_name, child_name), line in zip(line_pairs, line_list):
+    # 라인 업데이트
+    for joint, line in zip(robot.joints, line_list):
         if line is None:
             continue
+        parent_name = joint.parent
+        child_name = joint.child
         if parent_name not in positions or child_name not in positions:
             continue
         p0 = positions[parent_name] + offset
@@ -436,7 +386,7 @@ def _update_skeleton_artists(
         line.set_data(xs, ys)
         line.set_3d_properties(zs)
 
-    # 스캐터 업데이트: link_names에 포함된 링크만
+    # 스캐터 업데이트
     pts = np.stack([positions[name] + offset for name in link_names], axis=0)
     scatter._offsets3d = (pts[:, 0], pts[:, 1], pts[:, 2])
 
