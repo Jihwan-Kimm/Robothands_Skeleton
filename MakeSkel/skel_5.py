@@ -6,7 +6,7 @@ from typing import Dict, Sequence, Optional, List
 
 import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
+from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
 from matplotlib.widgets import Slider
 
 from urchin import URDF
@@ -27,28 +27,31 @@ JOINT_NAMES: Sequence[str] = [
     *[f"right_hand_joint_{i}" for i in range(16)],
 ]
 
+# 기본 포즈
 DEFAULT_JOINT_VALUES = np.array([
-    0.2,
-    0.0,
-    1.0559,
+    0.2,      # ewellix_lift_top_joint (prismatic)
+    0.0,      # pan_joint
+    1.0559,   # tilt_joint
 
-    1.5708,
-    -1.5708,
-    1.5708,
-    -1.5708,
-    0.0,
-    0.0,
-    0.0,
+    1.5708,   # left_joint_1
+    -1.5708,  # left_joint_2
+    1.5708,   # left_joint_3
+    -1.5708,  # left_joint_4
+    0.0,      # left_joint_5
+    0.0,      # left_joint_6
+    0.0,      # left_joint_7
 
-    1.5708,
-    1.5708,
-    -1.5708,
-    1.5708,
-    0.0,
-    0.0,
-    0.0,
+    1.5708,   # right_joint_1
+    1.5708,   # right_joint_2
+    -1.5708,  # right_joint_3
+    1.5708,   # right_joint_4
+    0.0,      # right_joint_5
+    0.0,      # right_joint_6
+    0.0,      # right_joint_7
 
+    # left_hand_joint_0 ~ 15
     *[0.0] * 16,
+    # right_hand_joint_0 ~ 15
     *[0.0] * 16,
 ], dtype=float)
 
@@ -57,23 +60,62 @@ HEAD_LINK_NAME = "head_camera_color_optical_frame"
 
 
 def get_head_link_position(robot: URDF, joint_cfg: Dict[str, float]) -> np.ndarray:
+    """HEAD_LINK_NAME 링크의 월드 좌표를 URDF FK로부터 구해서 반환."""
     fk = robot.link_fk(cfg=joint_cfg)
     for link, T in fk.items():
         if link.name == HEAD_LINK_NAME:
             pos = np.asarray(T[:3, 3], dtype=float).reshape(3)
             return pos
-    raise KeyError
+    raise KeyError(f"HEAD_LINK_NAME='{HEAD_LINK_NAME}' 링크를 FK 결과에서 찾을 수 없습니다.")
+
+
+def get_joint_names() -> Sequence[str]:
+    return list(JOINT_NAMES)
+
+
+def get_default_pose() -> Dict[str, float]:
+    return dict(zip(JOINT_NAMES, DEFAULT_JOINT_VALUES))
+
+
+def make_joint_cfg(overrides: Optional[Dict[str, float]] = None) -> Dict[str, float]:
+    cfg = get_default_pose()
+    if overrides:
+        for name, value in overrides.items():
+            if name not in cfg:
+                raise KeyError(f"알 수 없는 조인트 이름입니다: {name}")
+            cfg[name] = float(value)
+    return cfg
+
+
+# ---------------------------------------------------------------------------
+# URDF 로딩 및 Forward Kinematics
+# ---------------------------------------------------------------------------
+
+def load_robot(urdf_path: Optional[Path] = None) -> URDF:
+    if urdf_path is None:
+        urdf_path = Path(__file__).with_name(URDF_FILENAME)
+
+    if not urdf_path.is_file():
+        raise FileNotFoundError(f"URDF 파일을 찾을 수 없습니다: {urdf_path}")
+
+    return URDF.load(str(urdf_path), lazy_load_meshes=True)
 
 
 def compute_link_positions(robot: URDF, joint_cfg: Dict[str, float]) -> Dict[str, np.ndarray]:
     fk = robot.link_fk(cfg=joint_cfg)
-    return {link.name: np.asarray(T[:3, 3]).reshape(3) for link, T in fk.items()}
+    positions: Dict[str, np.ndarray] = {}
+    for link, transform in fk.items():
+        pos = np.asarray(transform[:3, 3]).reshape(3)
+        positions[link.name] = pos
+    return positions
 
 
 # ---------------------------------------------------------------------------
-# 스켈레톤 초기화 (수정됨)
+# 스켈레톤 초기화 / 업데이트
+#   - 카메라: pitch(=elev), yaw(=azim), FOV 슬라이더
+#   - 스켈레톤: tx, ty, tz 슬라이더 (로봇 전체 평행이동)
+#   + 슬라이더 값 상태 텍스트/콘솔 출력
 # ---------------------------------------------------------------------------
-
 def _init_skeleton_artists(
     robot: URDF,
     joint_cfg: Dict[str, float],
@@ -82,37 +124,22 @@ def _init_skeleton_artists(
     view_azim: float = -60.0,
     init_fov_deg: float = 120.0,
 ):
-
     positions = compute_link_positions(robot, joint_cfg)
 
-    # ----------------------------
-    # 요청한 구성으로만 라인 생성
-    # ----------------------------
-
+    # ------------------------------------------------------------------
+    # 여기서부터: 그릴 링크만 명시적으로 정의
+    # ------------------------------------------------------------------
     left_arm_core = [
         "left_spherical_wrist_1_link",
-        "left_spherical_wirst_2_link",
+        "left_spherical_wrist_2_link",
         "left_bracelet_link",
     ]
     right_arm_core = [
         "right_spherical_wrist_1_link",
-        "right_spherical_wirst_2_link",
+        "right_spherical_wrist_2_link",
         "right_bracelet_link",
     ]
-
-    left_finger_bases = [
-        "left_hand_link_0",
-        "left_hand_link_4",
-        "left_hand_link_8",
-        "left_hand_link_12",
-    ]
-    right_finger_bases = [
-        "right_hand_link_0",
-        "right_hand_link_4",
-        "right_hand_link_8",
-        "right_hand_link_12",
-    ]
-
+    # SIMPLIFIED: Only 2 joints per finger (base + tip)
     left_fingers = [
         ["left_hand_link_0", "left_hand_link_3_tip"],
         ["left_hand_link_4", "left_hand_link_7_tip"],
@@ -125,62 +152,225 @@ def _init_skeleton_artists(
         ["right_hand_link_8", "right_hand_link_11_tip"],
         ["right_hand_link_12", "right_hand_link_15_tip"],
     ]
+    finger_bases = [
+        "left_hand_link_0",
+        "left_hand_link_4",
+        "left_hand_link_8",
+        "left_hand_link_12",
+        "right_hand_link_0",
+        "right_hand_link_4",
+        "right_hand_link_8",
+        "right_hand_link_12",
+    ]
 
+    # 선으로 이을 (parent, child) 쌍들을 구성
     line_pairs: List[tuple[str, str]] = []
 
-    def add_chain(chain: List[str]):
+    def add_chain(chain: List[str]) -> None:
         for a, b in zip(chain[:-1], chain[1:]):
             if a in positions and b in positions:
                 line_pairs.append((a, b))
 
+    # 팔 코어: 3개 링크를 연속으로 이음
     add_chain(left_arm_core)
     add_chain(right_arm_core)
 
-    # wrist → finger base 연결
-    for base in left_finger_bases:
-        if "left_bracelet_link" in positions and base in positions:
-            line_pairs.append(("left_bracelet_link", base))
-    for base in right_finger_bases:
-        if "right_bracelet_link" in positions and base in positions:
-            line_pairs.append(("right_bracelet_link", base))
-
-    # finger base → tip
+    # 손가락: base - tip만 직선으로
     for base, tip in left_fingers + right_fingers:
         if base in positions and tip in positions:
             line_pairs.append((base, tip))
 
-    # -------- 점을 찍을 링크들(선에 등장한 링크만)
-    link_names = sorted({x for pair in line_pairs for x in pair})
+    # 실제로 사용할 링크 이름 집합 (선에 등장하는 것만)
+    link_names = sorted({name for pair in line_pairs for name in pair})
 
-    # ------------------------
-    # Figure 생성
-    # ------------------------
+    # ------------------------------------------------------------------
+    # Figure / Axes 설정
+    # ------------------------------------------------------------------
     fig = plt.figure(figsize=(8, 8))
     ax: Axes3D = fig.add_axes([0.05, 0.32, 0.9, 0.63], projection="3d")
+
     fig.patch.set_facecolor("black")
     ax.set_facecolor("black")
     ax.set_axis_off()
 
-    # ---- 라인 생성 ----
-    line_list: List = []
-    for p, c in line_pairs:
-        p0 = positions[p]
-        p1 = positions[c]
+    def draw_segment(link_a, link_b, color="magenta"):
+        if link_a not in positions or link_b not in positions:
+            return None
+        p0, p1 = positions[link_a], positions[link_b]
+        return ax.plot(
+            [p0[0], p1[0]], [p0[1], p1[1]], [p0[2], p1[2]],
+            color=color, linewidth=2.0, alpha=1.0
+        )[0]
+
+    # ----------------- 링크 라인 생성 -----------------
+    line_list: List[Optional[plt.Line2D]] = []
+    for parent_name, child_name in line_pairs:
+        p0 = positions[parent_name]
+        p1 = positions[child_name]
         xs = [p0[0], p1[0]]
         ys = [p0[1], p1[1]]
         zs = [p0[2], p1[2]]
-        line, = ax.plot(xs, ys, zs, color="magenta", linewidth=1.5, alpha=0.9)
+        line, = ax.plot(
+            xs, ys, zs,
+            linewidth=1.5,
+            color="magenta",
+            alpha=0.9,
+        )
         line_list.append(line)
 
-    # ---- 점 생성 ----
-    pts = np.stack([positions[n] for n in link_names], axis=0)
+    # ----------------- 점 생성 (선에 등장하는 링크들만) -----------------
+    pts = np.stack([positions[name] for name in link_names], axis=0)
     scatter = ax.scatter(
         pts[:, 0], pts[:, 1], pts[:, 2],
-        s=20,
+        s=20.0,
         c="yellow",
-        depthshade=False,
-        alpha=1.0,
+        depthshade=False,  # 진하게
+        alpha=1.0,         # 투명도 없이
     )
+
+    # ===========================
+    # 1) 머리 위치 & "척추 방향" 계산 (프레이밍 용)
+    # ===========================
+    head_pos = get_head_link_position(robot, joint_cfg)
+
+    # z가 가장 낮은 점을 "바닥 쪽"으로 가정
+    min_z_idx = np.argmin(pts[:, 2])
+    root_pos = pts[min_z_idx]
+
+    spine_vec = root_pos - head_pos          # head -> root
+    spine_len = float(np.linalg.norm(spine_vec))
+    if spine_len < 1e-6:
+        spine_len = 0.5
+
+    # ===========================
+    # 2) 프레이밍: 머리 주변으로 축 잡기
+    # ===========================
+    center = head_pos + 0.3 * spine_vec
+    half = 0.5 * spine_len
+
+    ax.set_xlim(center[0] - half, center[0] + half)
+    ax.set_ylim(center[1] - half, center[1] + half)
+    ax.set_zlim(center[2] - half, center[2] + half)
+
+    # ===========================
+    # 3) 카메라 초기 pitch/yaw
+    # ===========================
+    cam_vec = head_pos - center
+    vx, vy, vz = float(cam_vec[0]), float(cam_vec[1]), float(cam_vec[2])
+    yaw_init = np.degrees(np.arctan2(vy, vx))                         # azim
+    pitch_init = np.degrees(np.arctan2(vz, np.hypot(vx, vy)))         # elev
+
+    if not np.isfinite(yaw_init):
+        yaw_init = view_azim
+    if not np.isfinite(pitch_init):
+        pitch_init = view_elev
+
+    ax.view_init(elev=pitch_init, azim=yaw_init)
+
+    # ===========================
+    # 4) 투영/FOV 설정
+    # ===========================
+    def f_from_fov_deg(fov_deg: float) -> float:
+        # FOV = 2 * atan(1 / f)  ->  f = 1 / tan(FOV/2)
+        fov_rad = math.radians(max(1.0, min(179.0, fov_deg)))
+        return 1.0 / math.tan(0.5 * fov_rad)
+
+    focal_init = f_from_fov_deg(init_fov_deg)
+    ax.set_proj_type('persp', focal_length=focal_init)
+
+    # ------------------------------------------------------------------
+    # 슬라이더 설정
+    # ------------------------------------------------------------------
+    axcolor = "#222222"
+    ax_pitch = fig.add_axes([0.05, 0.25, 0.9, 0.02], facecolor=axcolor)
+    ax_yaw   = fig.add_axes([0.05, 0.21, 0.9, 0.02], facecolor=axcolor)
+    ax_fov   = fig.add_axes([0.05, 0.17, 0.9, 0.02], facecolor=axcolor)
+    ax_tx    = fig.add_axes([0.05, 0.13, 0.9, 0.02], facecolor=axcolor)
+    ax_ty    = fig.add_axes([0.05, 0.09, 0.9, 0.02], facecolor=axcolor)
+    ax_tz    = fig.add_axes([0.05, 0.05, 0.9, 0.02], facecolor=axcolor)
+
+    s_pitch = Slider(ax_pitch, "pitch", -180.0, 180.0, valinit=59.33)
+    s_yaw   = Slider(ax_yaw,   "yaw",   -180.0, 180.0, valinit=180)
+    s_fov   = Slider(ax_fov,   "FOV",    5.0, 175.0, valinit=161.78)
+
+    trans_range = spine_len * 2
+    s_tx = Slider(ax_tx, "tx", -trans_range, trans_range, valinit=-0.923)
+    s_ty = Slider(ax_ty, "ty", -trans_range, trans_range, valinit=0.005)
+    s_tz = Slider(ax_tz, "tz", -trans_range, trans_range, valinit=1.435)
+
+    fig._last_positions = positions
+
+    status_text = fig.text(
+        0.02, 0.98,
+        "",
+        color="white",
+        ha="left",
+        va="top",
+        fontsize=9,
+    )
+
+    def update_status_text() -> None:
+        pitch = s_pitch.val
+        yaw = s_yaw.val
+        fov_deg = s_fov.val
+        tx = s_tx.val
+        ty = s_ty.val
+        tz = s_tz.val
+        status = (
+            f"pitch={pitch:.2f}, yaw={yaw:.2f}, FOV={fov_deg:.2f} deg\n"
+            f"tx={tx:.3f}, ty={ty:.3f}, tz={tz:.3f}"
+        )
+        status_text.set_text(status)
+        print(status)
+
+    def update_camera(_val=None) -> None:
+        pitch = s_pitch.val
+        yaw = s_yaw.val
+        fov_deg = s_fov.val
+
+        ax.view_init(elev=pitch, azim=yaw)
+        focal = f_from_fov_deg(fov_deg)
+        ax.set_proj_type("persp", focal_length=focal)
+
+        update_status_text()
+        fig.canvas.draw_idle()
+
+    def update_skeleton(_val=None) -> None:
+        positions_cur = getattr(fig, "_last_positions", None)
+        if positions_cur is None:
+            return
+        offset = np.array([s_tx.val, s_ty.val, s_tz.val], dtype=float)
+        _update_skeleton_artists(
+            robot,
+            positions_cur,
+            line_list,
+            scatter,
+            link_names,
+            offset=offset,
+        )
+        update_status_text()
+        fig.canvas.draw_idle()
+
+    for s in (s_pitch, s_yaw, s_fov):
+        s.on_changed(update_camera)
+    for s in (s_tx, s_ty, s_tz):
+        s.on_changed(update_skeleton)
+
+    update_camera(None)
+    update_skeleton(None)
+
+    fig._cam_sliders = {
+        "pitch": s_pitch,
+        "yaw": s_yaw,
+        "fov": s_fov,
+    }
+    fig._skel_sliders = {
+        "tx": s_tx,
+        "ty": s_ty,
+        "tz": s_tz,
+    }
+
+    return fig, ax, line_list, scatter, link_names
 
 
 def _update_skeleton_artists(
