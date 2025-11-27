@@ -156,6 +156,7 @@ def _init_skeleton_artists(
 
     # hand tip 으로 간주되는 child link 들 (선/점 둘 다 빼줄 대상)
     hand_tip_links = {j.child for j in robot.joints if is_hand_tip_segment(j)}
+    print(f"[INFO] hand tip links: {hand_tip_links}")
 
     # 손등 비전 / RGB 센서 링크 필터
     def is_hand_sensor_link(link_name: str) -> bool:
@@ -359,7 +360,7 @@ def _init_skeleton_artists(
 
 
 def _update_skeleton_artists(
-    robot: URDF,
+    robot: URDF,  # 이제는 쓰지 않지만, 시그니처는 그대로 둡니다
     positions: Dict[str, np.ndarray],
     line_list: List,
     scatter,
@@ -370,12 +371,12 @@ def _update_skeleton_artists(
     if offset is None:
         offset = np.zeros(3, dtype=float)
 
-    # 라인 업데이트
-    for joint, line in zip(robot.joints, line_list):
+    segments = _build_segments()
+
+    # 라인 업데이트: segment 리스트 기준으로
+    for (parent_name, child_name), line in zip(segments, line_list):
         if line is None:
             continue
-        parent_name = joint.parent
-        child_name = joint.child
         if parent_name not in positions or child_name not in positions:
             continue
         p0 = positions[parent_name] + offset
@@ -386,7 +387,7 @@ def _update_skeleton_artists(
         line.set_data(xs, ys)
         line.set_3d_properties(zs)
 
-    # 스캐터 업데이트
+    # 스캐터 업데이트: link_names에 들어있는 링크만
     pts = np.stack([positions[name] + offset for name in link_names], axis=0)
     scatter._offsets3d = (pts[:, 0], pts[:, 1], pts[:, 2])
 
